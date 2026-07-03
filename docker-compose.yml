@@ -1,0 +1,81 @@
+services:
+  mongo1:
+    image: mongo:7.0
+    container_name: bd2-mongo1
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongo1_data:/data/db
+    networks:
+      - mongo-network
+
+  mongo2:
+    image: mongo:7.0
+    container_name: bd2-mongo2
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongo2_data:/data/db
+    networks:
+      - mongo-network
+
+  mongo3:
+    image: mongo:7.0
+    container_name: bd2-mongo3
+    restart: unless-stopped
+    ports:
+      - "27019:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongo3_data:/data/db
+    networks:
+      - mongo-network
+
+  mongo4:
+    image: mongo:7.0
+    container_name: bd2-mongo4
+    restart: unless-stopped
+    ports:
+      - "27020:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongo4_data:/data/db
+    networks:
+      - mongo-network
+
+  mongo5:
+    image: mongo:7.0
+    container_name: bd2-mongo5
+    restart: unless-stopped
+    ports:
+      - "27021:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongo5_data:/data/db
+    networks:
+      - mongo-network
+
+volumes:
+  mongo1_data:
+  mongo2_data:
+  mongo3_data:
+  mongo4_data:
+  mongo5_data:
+
+networks:
+  mongo-network:
+    driver: bridge
