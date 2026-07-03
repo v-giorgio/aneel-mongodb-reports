@@ -1,0 +1,31 @@
+body {
+  letter-spacing: 0;
+}
+
+.api-input {
+  width: min(52vw, 360px);
+}
+
+.json-editor {
+  min-height: 300px;
+  resize: vertical;
+}
+
+.bulk-editor {
+  min-height: 170px;
+  resize: vertical;
+}
+
+.response-box {
+  max-height: 420px;
+  overflow: auto;
+  padding: 1rem;
+  margin: 0;
+  background: #111827;
+  color: #f9fafb;
+  border-radius: 6px;
+}
+
+.card {
+  border-radius: 8px;
+}
