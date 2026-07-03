@@ -1,0 +1,86 @@
+name: bd2
+
+x-mongo-common: &mongo-common
+  image: mongo:7.0
+  restart: unless-stopped
+  command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+  networks:
+    - mongo-network
+  healthcheck:
+    test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 }).ok"]
+    interval: 10s
+    timeout: 5s
+    retries: 10
+    start_period: 20s
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: bd2-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_ENV: development
+      MONGO_DATABASE: bd2
+      MONGO_URI: mongodb://mongo1:27017,mongo2:27017,mongo3:27017/bd2?replicaSet=rs0&readPreference=secondaryPreferred
+    depends_on:
+      mongo-setup:
+        condition: service_completed_successfully
+    networks:
+      - mongo-network
+
+  mongo1:
+    <<: *mongo-common
+    container_name: bd2-mongo1
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo1_data:/data/db
+
+  mongo2:
+    <<: *mongo-common
+    container_name: bd2-mongo2
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo2_data:/data/db
+
+  mongo3:
+    <<: *mongo-common
+    container_name: bd2-mongo3
+    ports:
+      - "27019:27017"
+    volumes:
+      - mongo3_data:/data/db
+
+  mongo-setup:
+    image: mongo:7.0
+    container_name: bd2-mongo-setup
+    restart: "no"
+    depends_on:
+      mongo1:
+        condition: service_healthy
+      mongo2:
+        condition: service_healthy
+      mongo3:
+        condition: service_healthy
+    volumes:
+      - ./mongo/init-replica-set.js:/scripts/init-replica-set.js:ro
+    command: >
+      bash -c "
+        mongosh --host mongo1:27017 /scripts/init-replica-set.js
+      "
+    networks:
+      - mongo-network
+
+volumes:
+  mongo1_data:
+  mongo2_data:
+  mongo3_data:
+
+networks:
+  mongo-network:
+    driver: bridge
