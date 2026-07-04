@@ -349,8 +349,8 @@ acontece nas leituras, conforme a preferencia configurada no driver.
 ## Como citar
 
 ```bibtex
-@misc{carvalho2026aneel_mongodb_reports,
-  author       = {Carvalho, Vitor Lucio Giorgio Cardoso de and Souza, Antonio Henrique Nazar de and Campos, Rafael Gomes and Everton},
+@misc{giorgio2026aneel_mongodb_reports,
+  author       = {Giorgio, Vitor and Nazar, Antonio and Campos, Rafael and Nascimento, Everton},
   title        = {Armazenamento e Consulta de Interrupções de Energia Elétrica em MongoDB Distribuído},
   year         = {2026},
   howpublished = {GitHub repository},
@@ -361,6 +361,4 @@ acontece nas leituras, conforme a preferencia configurada no driver.
 
 ## Licença
 
-O código-fonte é licenciado sob GNU GPLv3, conforme o arquivo `LICENSE`.
-Dados, documentos, referências bibliográficas e materiais de terceiros podem
-estar sujeitos aos termos de suas fontes originais.
+O código-fonte é licenciado sob GNU GPLv3, conforme o arquivo `LICENSE`. Dados, documentos, referências bibliográficas e materiais de terceiros podem estar sujeitos aos termos de suas fontes originais.
