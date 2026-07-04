@@ -1,4 +1,4 @@
-# Trabalho BD2
+# Armazenamento e Consulta de Interrupções de Energia Elétrica em MongoDB Distribuído
 
 Ambiente com:
 
@@ -345,3 +345,22 @@ acontece nas leituras, conforme a preferencia configurada no driver.
 10s - 1000
 24s - 50_000
 33.6s - 100_000
+
+## Como citar
+
+```bibtex
+@misc{carvalho2026aneel_mongodb_reports,
+  author       = {Carvalho, Vitor Lucio Giorgio Cardoso de and Souza, Antonio Henrique Nazar de and Campos, Rafael Gomes and Everton},
+  title        = {Armazenamento e Consulta de Interrupções de Energia Elétrica em MongoDB Distribuído},
+  year         = {2026},
+  howpublished = {GitHub repository},
+  url          = {https://github.com/v-giorgio/aneel-mongodb-reports},
+  note         = {Trabalho prático de Bancos de Dados II}
+}
+```
+
+## Licença
+
+O código-fonte é licenciado sob GNU GPLv3, conforme o arquivo `LICENSE`.
+Dados, documentos, referências bibliográficas e materiais de terceiros podem
+estar sujeitos aos termos de suas fontes originais.
