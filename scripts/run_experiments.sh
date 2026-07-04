@@ -38,9 +38,6 @@ detect_python() {
     "python"
     "py -3"
     "py"
-    "$win_userprofile/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe"
-    "$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe"
-    "/c/Users/$USERNAME/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe"
   )
   local candidate
   for candidate in "${candidates[@]}"; do
