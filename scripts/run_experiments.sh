@@ -9,7 +9,7 @@ LOG_DIR="${LOG_DIR:-$ROOT_DIR/documentacao/experimentos}"
 RUN_ID="${RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)}"
 BATCH_SIZE="${BATCH_SIZE:-1000}"
 LOG_EVERY_BATCH="${LOG_EVERY_BATCH:-10}"
-STOP_NODE="${STOP_NODE:-mongo3}"
+PRIMARY_RECOVERY_WAIT="${PRIMARY_RECOVERY_WAIT:-20}"
 SKIP_DOCKER_UP="${SKIP_DOCKER_UP:-0}"
 HEALTHCHECK_ONLY="${HEALTHCHECK_ONLY:-0}"
 
@@ -125,6 +125,119 @@ url = sys.argv[1]
 with urllib.request.urlopen(url, timeout=120) as response:
     print(response.read().decode("utf-8", errors="replace"))
 PY
+}
+
+get_primary_service() {
+  python_run - "$API_URL" <<'PY'
+import json
+import sys
+import urllib.request
+
+api_url = sys.argv[1].rstrip("/")
+with urllib.request.urlopen(f"{api_url}/cluster", timeout=120) as response:
+    cluster = json.loads(response.read().decode("utf-8"))
+
+primary = cluster.get("primary")
+if not primary:
+    raise SystemExit("cluster sem primary reportado")
+
+print(primary.split(":")[0])
+PY
+}
+
+wait_for_new_primary() {
+  local stopped_primary="$1"
+  local current_primary
+  local status
+
+  log "Aguardando eleicao de novo primario apos parar $stopped_primary"
+  for attempt in $(seq 1 60); do
+    set +e
+    current_primary="$(get_primary_service 2>/dev/null)"
+    status=$?
+    set -e
+
+    if [[ "$status" -eq 0 && -n "$current_primary" && "$current_primary" != "$stopped_primary" ]]; then
+      log "Novo primario eleito: $current_primary"
+      return 0
+    fi
+
+    if [[ "$attempt" == "1" || $((attempt % 10)) -eq 0 ]]; then
+      log "Tentativa eleicao primary attempt=$attempt current=${current_primary:-indisponivel}"
+    fi
+    sleep 2
+  done
+
+  log "ERRO replica set nao elegeu novo primario dentro do tempo esperado"
+  exit 1
+}
+
+member_is_healthy() {
+  local member_name="$1"
+
+  python_run - "$API_URL" "$member_name" <<'PY'
+import json
+import sys
+import urllib.request
+
+api_url = sys.argv[1].rstrip("/")
+member_name = sys.argv[2]
+
+with urllib.request.urlopen(f"{api_url}/cluster", timeout=120) as response:
+    cluster = json.loads(response.read().decode("utf-8"))
+
+for member in cluster.get("members", []):
+    service_name = member.get("name", "").split(":")[0]
+    if service_name == member_name and float(member.get("health", 0)) == 1.0:
+        print(member.get("state", "UNKNOWN"))
+        raise SystemExit(0)
+
+raise SystemExit(1)
+PY
+}
+
+wait_for_member_healthy() {
+  local member_name="$1"
+  local member_state
+  local status
+
+  log "Aguardando $member_name voltar saudavel ao replica set"
+  for attempt in $(seq 1 60); do
+    set +e
+    member_state="$(member_is_healthy "$member_name" 2>/dev/null)"
+    status=$?
+    set -e
+
+    if [[ "$status" -eq 0 ]]; then
+      log "$member_name saudavel no replica set state=$member_state"
+      return 0
+    fi
+
+    if [[ "$attempt" == "1" || $((attempt % 10)) -eq 0 ]]; then
+      log "Tentativa retorno membro attempt=$attempt member=$member_name"
+    fi
+    sleep 2
+  done
+
+  log "ERRO $member_name nao voltou saudavel ao replica set dentro do tempo esperado"
+  exit 1
+}
+
+log_cluster_status() {
+  local label="$1"
+  local cluster
+  local status
+
+  set +e
+  cluster="$(http_get "$API_URL/cluster" 2>&1)"
+  status=$?
+  set -e
+
+  if [[ "$status" -eq 0 ]]; then
+    log "$label: $cluster"
+  else
+    log "$label indisponivel: $cluster"
+  fi
 }
 
 measure_get() {
@@ -372,30 +485,37 @@ run_test_3_node_failure() {
   local collection="interrupcoes_exp_${RUN_ID}_1k"
   local before_file="$LOG_DIR/${RUN_ID}-falha-before.json"
   local after_file="$LOG_DIR/${RUN_ID}-falha-after.json"
+  local primary_node
 
-  log "TESTE 3 - Falha de no"
+  log "TESTE 3 - Falha do no primario"
+  primary_node="$(get_primary_service)"
+  log "No primario identificado antes da falha: $primary_node"
   log "Consulta normal antes da falha collection=$collection"
   measure_get "falha_no_antes" \
     "$API_URL/interrupcoes/estatisticas/tipo?collection=$collection" \
     "$before_file"
 
-  log "Desligando node $STOP_NODE"
-  docker compose -f "$COMPOSE_FILE" stop "$STOP_NODE" | tee -a "$LOG_FILE"
-  sleep 10
+  log "Desligando no primario $primary_node"
+  docker compose -f "$COMPOSE_FILE" stop "$primary_node" | tee -a "$LOG_FILE"
+  sleep "$PRIMARY_RECOVERY_WAIT"
+  wait_for_new_primary "$primary_node"
+  log_cluster_status "Cluster apos falha do primario"
 
-  log "Consulta apos desligar $STOP_NODE"
+  log "Consulta apos desligar primario original $primary_node"
   measure_get "falha_no_depois" \
     "$API_URL/interrupcoes/estatisticas/tipo?collection=$collection" \
     "$after_file"
 
-  log "Religando node $STOP_NODE"
-  docker compose -f "$COMPOSE_FILE" up -d "$STOP_NODE" | tee -a "$LOG_FILE"
+  log "Religando primario original $primary_node"
+  docker compose -f "$COMPOSE_FILE" up -d "$primary_node" | tee -a "$LOG_FILE"
   wait_for_api
+  wait_for_member_healthy "$primary_node"
+  log_cluster_status "Cluster apos religar primario original"
 
   if cmp -s "$before_file" "$after_file"; then
-    log "Comparacao falha de no: resultados identicos"
+    log "Comparacao falha de primario: resultados identicos"
   else
-    log "Comparacao falha de no: resultados diferentes; verificar $before_file e $after_file"
+    log "Comparacao falha de primario: resultados diferentes; verificar $before_file e $after_file"
   fi
 }
 
@@ -413,7 +533,7 @@ main() {
   log "DATASET_DIR=$DATASET_DIR"
   log "BATCH_SIZE=$BATCH_SIZE"
   log "LOG_EVERY_BATCH=$LOG_EVERY_BATCH"
-  log "STOP_NODE=$STOP_NODE"
+  log "PRIMARY_RECOVERY_WAIT=$PRIMARY_RECOVERY_WAIT"
   log "SKIP_DOCKER_UP=$SKIP_DOCKER_UP"
   log "HEALTHCHECK_ONLY=$HEALTHCHECK_ONLY"
   log "LOG_FILE=$LOG_FILE"

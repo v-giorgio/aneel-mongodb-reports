@@ -256,8 +256,9 @@ do enunciado de forma reproduzivel:
 - Teste 1: mede o tempo de insercao para 1.000, 50.000 e 100.000 registros.
 - Teste 2: mede consultas por tipo, periodo, localizacao, gravidade e
   estatisticas para os tres volumes.
-- Teste 3: executa uma consulta, desliga um node MongoDB, executa a consulta
-  novamente e compara os resultados.
+- Teste 3: executa uma consulta, identifica o node primario atual do MongoDB,
+  desliga esse primario, aguarda uma nova eleicao, executa a consulta novamente
+  e compara os resultados.
 
 Execute a partir da raiz do projeto usando Bash, por exemplo Git Bash, WSL ou
 Linux:
@@ -291,7 +292,7 @@ Variaveis opcionais:
 RUN_ID=teste01 bash scripts/run_experiments.sh
 BATCH_SIZE=500 bash scripts/run_experiments.sh
 SKIP_DOCKER_UP=1 bash scripts/run_experiments.sh
-STOP_NODE=mongo2 bash scripts/run_experiments.sh
+PRIMARY_RECOVERY_WAIT=30 bash scripts/run_experiments.sh
 API_URL=http://localhost:5000 bash scripts/run_experiments.sh
 ```
 
