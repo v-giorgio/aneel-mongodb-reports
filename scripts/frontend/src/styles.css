@@ -16,6 +16,12 @@ body {
   resize: vertical;
 }
 
+.collection-total {
+  align-self: center;
+  font-size: 0.9rem;
+  padding: 0.55rem 0.75rem;
+}
+
 .response-box {
   max-height: 420px;
   overflow: auto;

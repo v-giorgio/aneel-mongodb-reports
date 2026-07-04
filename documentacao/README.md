@@ -32,6 +32,13 @@ Depois suba tudo:
 docker compose -f docker/docker-compose.yml up --build -d
 ```
 
+Depois de alterar ou criar endpoints Flask, reconstrua a imagem da API para o
+Docker usar o codigo novo:
+
+```bash
+docker compose -f docker/docker-compose.yml up --build -d api
+```
+
 API:
 
 ```text
@@ -142,6 +149,15 @@ curl -X POST http://localhost:5000/interrupcoes/bulk \
   -H "Content-Type: application/json" \
   -d "[{\"idEvento\":\"EVT000001\",\"tipoInterrupcao\":\"Nao Programada\",\"dataHoraInicio\":\"2025-06-14T15:45:20\"},{\"idEvento\":\"EVT000002\",\"tipoInterrupcao\":\"Programada\",\"dataHoraInicio\":\"2025-06-15T10:00:00\"}]"
 ```
+
+### Contar registros de uma collection
+
+```bash
+curl "http://localhost:5000/interrupcoes/count?collection=interrupcoes"
+```
+
+Esse endpoint le do node `PRIMARY` para evitar contagem desatualizada logo apos
+uma insercao em lote, ja que as demais consultas usam `secondaryPreferred`.
 
 Tambem existe o endpoint generico para qualquer collection:
 

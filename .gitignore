@@ -223,3 +223,6 @@ __marimo__/
 
 # CSV
 *.csv
+
+# Experimentos
+**/experimentos/**

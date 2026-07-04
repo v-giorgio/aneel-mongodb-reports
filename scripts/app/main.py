@@ -6,7 +6,7 @@ from datetime import date, datetime
 from bson import ObjectId
 from bson.errors import InvalidId
 from flask import Flask, jsonify, request
-from pymongo import MongoClient
+from pymongo import MongoClient, ReadPreference
 from pymongo.errors import PyMongoError
 
 
@@ -85,11 +85,20 @@ def get_limit(default=50, maximum=1000):
     return min(limit, maximum)
 
 
-def get_events_collection():
+def get_events_collection_name():
+    """
+    Return the selected events collection name from query parameter or default.
+    """
+    return request.args.get("collection", EVENTS_COLLECTION)
+
+
+def get_events_collection(read_preference=None):
     """
     Return the events collection selected by query parameter or the default name.
     """
-    collection_name = request.args.get("collection", EVENTS_COLLECTION)
+    collection_name = get_events_collection_name()
+    if read_preference is not None:
+        return db.get_collection(collection_name, read_preference=read_preference)
     return db[collection_name]
 
 
@@ -229,6 +238,21 @@ def insert_many_interruptions():
     )
 
 
+@app.get("/interrupcoes/count")
+def count_interruptions():
+    """
+    Count interruption events in the selected events collection.
+    """
+    collection = get_events_collection(read_preference=ReadPreference.PRIMARY)
+    count = collection.count_documents({})
+    return jsonify(
+        {
+            "collection": collection.name,
+            "count": count,
+        }
+    )
+
+
 @app.get("/interrupcoes/tipo")
 def find_interruptions_by_type():
     """
@@ -339,7 +363,15 @@ def statistics_by_neighborhood_alias():
     """
     Return the agent aggregation used as the bairro requirement alias for this dataset.
     """
-    return statistics_by_regulated_agent()
+    pipeline = [
+        {"$match": agent_filter()},
+        {"$group": {"_id": "$conjuntoConsumidor", "total": {"$sum": 1}}},
+        {"$project": {"_id": 0, "conjuntoConsumidor": "$_id", "total": 1}},
+        {"$sort": {"total": -1, "conjuntoConsumidor": 1}},
+    ]
+
+    results = list(get_events_collection().aggregate(pipeline))
+    return jsonify({"results": serialize(results)})
 
 
 @app.get("/interrupcoes/estatisticas/evolucao-temporal")

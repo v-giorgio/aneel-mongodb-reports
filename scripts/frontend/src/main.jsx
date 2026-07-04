@@ -45,10 +45,11 @@ function App() {
   const [limit, setLimit] = useState("50");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [collectionTotal, setCollectionTotal] = useState(null);
 
   const collectionParam = useMemo(() => ({ collection }), [collection]);
 
-  async function request(path, { method = "GET", params = {}, body } = {}) {
+  async function request(path, { method = "GET", params = {}, body, onSuccess } = {}) {
     setLoading(true);
     try {
       const url = buildUrl(apiUrl, path, { ...collectionParam, ...params });
@@ -59,9 +60,16 @@ function App() {
       });
       const text = await response.text();
       const data = text ? JSON.parse(text) : {};
-      setResult({ ok: response.ok, status: response.status, url, data });
+      const nextResult = { ok: response.ok, status: response.status, url, data };
+      setResult(nextResult);
+      if (response.ok && onSuccess) {
+        onSuccess(data);
+      }
+      return nextResult;
     } catch (error) {
-      setResult({ ok: false, status: "erro", url: "", data: { error: error.message } });
+      const nextResult = { ok: false, status: "erro", url: "", data: { error: error.message } };
+      setResult(nextResult);
+      return nextResult;
     } finally {
       setLoading(false);
     }
@@ -94,6 +102,12 @@ function App() {
     }
   }
 
+  function countCollectionDocuments() {
+    request("/interrupcoes/count", {
+      onSuccess: (data) => setCollectionTotal(data.count),
+    });
+  }
+
   return (
     <main className="min-vh-100 bg-body-tertiary">
       <nav className="navbar navbar-expand-lg bg-white border-bottom sticky-top">
@@ -116,10 +130,23 @@ function App() {
             <div className="mb-3 d-flex flex-wrap gap-2 align-items-end">
               <div>
                 <label className="form-label">Collection</label>
-                <input className="form-control" value={collection} onChange={(event) => setCollection(event.target.value)} />
+                <input
+                  className="form-control"
+                  value={collection}
+                  onChange={(event) => {
+                    setCollection(event.target.value);
+                    setCollectionTotal(null);
+                  }}
+                />
               </div>
               <button className="btn btn-outline-secondary" onClick={() => request("/health")}>Health</button>
               <button className="btn btn-outline-secondary" onClick={() => request("/cluster")}>Cluster</button>
+              <button className="btn btn-outline-secondary" onClick={countCollectionDocuments}>Total registros</button>
+              {collectionTotal !== null && (
+                <span className="badge text-bg-dark collection-total">
+                  {collectionTotal} registros
+                </span>
+              )}
             </div>
 
             <div className="row g-4">
@@ -238,7 +265,7 @@ function App() {
                     Quantidade por agente regulado
                   </button>
                   <button className="btn btn-outline-dark" onClick={() => request("/interrupcoes/estatisticas/bairro", { params: { agenteRegulado } })}>
-                    Quantidade por bairro
+                    Quantidade por município/bairro
                   </button>
                   <button className="btn btn-outline-dark" onClick={() => request("/interrupcoes/estatisticas/evolucao-temporal", { params: { agenteRegulado } })}>
                     Evolucao temporal
